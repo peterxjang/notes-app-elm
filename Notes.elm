@@ -3,6 +3,7 @@ module Notes exposing (..)
 import Date
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Task
 import Time
 
@@ -25,7 +26,7 @@ type alias Note =
 
 
 type alias Model =
-    { notes : List Note }
+    { notes : List Note, selectedNoteId : Int }
 
 
 init : ( Model, Cmd Msg )
@@ -35,6 +36,7 @@ init =
             , { id = 2, body = "Second note...", timestamp = 0 }
             , { id = 3, body = "Third note...", timestamp = 0 }
             ]
+      , selectedNoteId = 1
       }
     , Task.perform InitializeTimestamps Time.now
     )
@@ -46,6 +48,7 @@ init =
 
 type Msg
     = InitializeTimestamps Time.Time
+    | SelectNote Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -57,6 +60,9 @@ update msg model =
               }
             , Cmd.none
             )
+
+        SelectNote id ->
+            ( { model | selectedNoteId = id }, Cmd.none )
 
 
 
@@ -82,10 +88,7 @@ view model =
             ]
         , div [ class "note-container" ]
             [ viewNoteSelectors model
-            , div [ class "note-editor" ]
-                [ p [ class "note-editor-info" ] [ text "Timestamp here..." ]
-                , textarea [ class "note-editor-input" ] [ text "First note..." ]
-                ]
+            , viewNoteEditor model
             ]
         ]
 
@@ -96,16 +99,29 @@ viewNoteSelectors model =
         (model.notes
             |> List.sortBy .timestamp
             |> List.reverse
-            |> List.map (\note -> viewNoteSelector note)
+            |> List.map (\note -> viewNoteSelector note model.selectedNoteId)
         )
 
 
-viewNoteSelector : Note -> Html Msg
-viewNoteSelector note =
-    div [ class "note-selector" ]
+viewNoteSelector : Note -> Int -> Html Msg
+viewNoteSelector note selectedNoteId =
+    div [ classList [ ( "note-selector", True ), ( "active", note.id == selectedNoteId ) ], onClick (SelectNote note.id) ]
         [ p [ class "note-selector-title" ] [ text (formatTitle note.body) ]
         , p [ class "note-selector-timestamp" ] [ text (formatTimestamp note.timestamp) ]
         ]
+
+
+viewNoteEditor : Model -> Html Msg
+viewNoteEditor model =
+    case model.notes |> List.filter (\note -> note.id == model.selectedNoteId) |> List.head of
+        Nothing ->
+            div [ class "note-editor" ] []
+
+        Just selectedNote ->
+            div [ class "note-editor" ]
+                [ p [ class "note-editor-info" ] [ text (formatTimestamp selectedNote.timestamp) ]
+                , textarea [ class "note-editor-input" ] [ text selectedNote.body ]
+                ]
 
 
 formatTitle : String -> String
