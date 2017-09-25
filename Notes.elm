@@ -53,6 +53,7 @@ type Msg
     | UpdateNote String Time.Time
     | ClickNew
     | CreateNote Time.Time
+    | ClickDelete
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -103,6 +104,21 @@ update msg model =
             , Cmd.none
             )
 
+        ClickDelete ->
+            let
+                newNotes =
+                    List.filter (\note -> note.id /= model.selectedNoteId) model.notes
+
+                firstVisibleNote =
+                    newNotes |> sortNotes |> List.head
+            in
+            case firstVisibleNote of
+                Nothing ->
+                    ( { model | notes = newNotes }, Cmd.none )
+
+                Just availableNote ->
+                    ( { model | notes = newNotes, selectedNoteId = availableNote.id }, Cmd.none )
+
 
 
 -- SUBSCRIPTIONS
@@ -122,7 +138,7 @@ view model =
     div [ id "app" ]
         [ div [ class "toolbar" ]
             [ button [ class "toolbar-button", onClick ClickNew ] [ text "New" ]
-            , button [ class "toolbar-button" ] [ text "Delete" ]
+            , button [ class "toolbar-button", onClick ClickDelete ] [ text "Delete" ]
             , input [ class "toolbar-search", type_ "text", placeholder "Search..." ] []
             ]
         , div [ class "note-container" ]
@@ -136,8 +152,7 @@ viewNoteSelectors : Model -> Html Msg
 viewNoteSelectors model =
     div [ class "note-selectors" ]
         (model.notes
-            |> List.sortBy .timestamp
-            |> List.reverse
+            |> sortNotes
             |> List.map (\note -> viewNoteSelector note model.selectedNoteId)
         )
 
@@ -161,6 +176,11 @@ viewNoteEditor model =
                 [ p [ class "note-editor-info" ] [ text (formatTimestamp selectedNote.timestamp) ]
                 , textarea [ class "note-editor-input", onInput InputNoteBody, value selectedNote.body ] []
                 ]
+
+
+sortNotes : List Note -> List Note
+sortNotes notes =
+    notes |> List.sortBy .timestamp |> List.reverse
 
 
 getSelectedNote : Model -> Maybe Note
