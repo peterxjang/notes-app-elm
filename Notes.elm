@@ -2,6 +2,8 @@ module Notes exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Task
+import Time
 
 
 main =
@@ -33,7 +35,7 @@ init =
             , { id = 3, body = "Third note...", timestamp = 0 }
             ]
       }
-    , Cmd.none
+    , Task.perform InitializeTimestamps Time.now
     )
 
 
@@ -42,12 +44,18 @@ init =
 
 
 type Msg
-    = NoOp
+    = InitializeTimestamps Time.Time
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    ( model, Cmd.none )
+    case msg of
+        InitializeTimestamps time ->
+            ( { model
+                | notes = model.notes |> List.map (\note -> { note | timestamp = time })
+              }
+            , Cmd.none
+            )
 
 
 
