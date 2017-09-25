@@ -26,7 +26,7 @@ type alias Note =
 
 
 type alias Model =
-    { notes : List Note, selectedNoteId : Int }
+    { notes : List Note, selectedNoteId : Int, searchNoteText : String }
 
 
 init : ( Model, Cmd Msg )
@@ -37,6 +37,7 @@ init =
             , { id = 3, body = "Third note...", timestamp = 0 }
             ]
       , selectedNoteId = 1
+      , searchNoteText = ""
       }
     , Task.perform InitializeTimestamps Time.now
     )
@@ -54,6 +55,7 @@ type Msg
     | ClickNew
     | CreateNote Time.Time
     | ClickDelete
+    | InputSearch String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -110,7 +112,7 @@ update msg model =
                     List.filter (\note -> note.id /= model.selectedNoteId) model.notes
 
                 firstVisibleNote =
-                    newNotes |> sortNotes |> List.head
+                    getFirstVisibleNote newNotes model.searchNoteText
             in
             case firstVisibleNote of
                 Nothing ->
@@ -118,6 +120,18 @@ update msg model =
 
                 Just availableNote ->
                     ( { model | notes = newNotes, selectedNoteId = availableNote.id }, Cmd.none )
+
+        InputSearch searchNoteText ->
+            let
+                firstVisibleNote =
+                    getFirstVisibleNote model.notes searchNoteText
+            in
+            case firstVisibleNote of
+                Nothing ->
+                    ( { model | searchNoteText = searchNoteText, selectedNoteId = -1 }, Cmd.none )
+
+                Just availableNote ->
+                    ( { model | searchNoteText = searchNoteText, selectedNoteId = availableNote.id }, Cmd.none )
 
 
 
@@ -139,7 +153,7 @@ view model =
         [ div [ class "toolbar" ]
             [ button [ class "toolbar-button", onClick ClickNew ] [ text "New" ]
             , button [ class "toolbar-button", onClick ClickDelete ] [ text "Delete" ]
-            , input [ class "toolbar-search", type_ "text", placeholder "Search..." ] []
+            , input [ class "toolbar-search", type_ "text", placeholder "Search...", onInput InputSearch ] []
             ]
         , div [ class "note-container" ]
             [ viewNoteSelectors model
@@ -152,7 +166,7 @@ viewNoteSelectors : Model -> Html Msg
 viewNoteSelectors model =
     div [ class "note-selectors" ]
         (model.notes
-            |> sortNotes
+            |> transformNotes model.searchNoteText
             |> List.map (\note -> viewNoteSelector note model.selectedNoteId)
         )
 
@@ -178,14 +192,27 @@ viewNoteEditor model =
                 ]
 
 
-sortNotes : List Note -> List Note
-sortNotes notes =
-    notes |> List.sortBy .timestamp |> List.reverse
+getFirstVisibleNote : List Note -> String -> Maybe Note
+getFirstVisibleNote notes searchText =
+    notes
+        |> transformNotes searchText
+        |> List.head
+
+
+transformNotes : String -> List Note -> List Note
+transformNotes searchNoteText notes =
+    notes
+        |> List.filter (\note -> String.contains (String.toLower searchNoteText) (String.toLower note.body))
+        |> List.sortBy .timestamp
+        |> List.reverse
 
 
 getSelectedNote : Model -> Maybe Note
 getSelectedNote model =
-    model.notes |> List.filter (\note -> note.id == model.selectedNoteId) |> List.head
+    model.notes
+        |> transformNotes model.searchNoteText
+        |> List.filter (\note -> note.id == model.selectedNoteId)
+        |> List.head
 
 
 formatTitle : String -> String
