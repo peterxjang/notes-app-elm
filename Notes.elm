@@ -1,5 +1,6 @@
 module Notes exposing (..)
 
+import Date
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Task
@@ -52,7 +53,7 @@ update msg model =
     case msg of
         InitializeTimestamps time ->
             ( { model
-                | notes = model.notes |> List.map (\note -> { note | timestamp = time })
+                | notes = List.map (\note -> { note | timestamp = time }) model.notes
               }
             , Cmd.none
             )
@@ -92,12 +93,39 @@ view model =
 viewNoteSelectors : Model -> Html Msg
 viewNoteSelectors model =
     div [ class "note-selectors" ]
-        (model.notes |> List.map (\note -> viewNoteSelector note))
+        (model.notes
+            |> List.sortBy .timestamp
+            |> List.reverse
+            |> List.map (\note -> viewNoteSelector note)
+        )
 
 
 viewNoteSelector : Note -> Html Msg
 viewNoteSelector note =
     div [ class "note-selector" ]
-        [ p [ class "note-selector-title" ] [ text note.body ]
-        , p [ class "note-selector-timestamp" ] [ note.timestamp |> toString |> text ]
+        [ p [ class "note-selector-title" ] [ text (formatTitle note.body) ]
+        , p [ class "note-selector-timestamp" ] [ text (formatTimestamp note.timestamp) ]
         ]
+
+
+formatTitle : String -> String
+formatTitle body =
+    let
+        maxLength =
+            20
+
+        length =
+            String.length body
+    in
+    if length > maxLength then
+        String.left (maxLength - 3) body ++ "..."
+    else if length == 0 then
+        "New note"
+    else
+        body
+
+
+formatTimestamp : Float -> String
+formatTimestamp timestamp =
+    toString (Date.fromTime timestamp)
+        |> String.slice 1 -16
