@@ -3,6 +3,8 @@ module Notes exposing (main)
 import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Task
+import Time
 
 
 main =
@@ -34,7 +36,7 @@ init _ =
             , { id = 3, body = "Third note...", timestamp = 0 }
             ]
       }
-    , Cmd.none
+    , Task.perform InitializeNotesTimestamps Time.now
     )
 
 
@@ -43,12 +45,18 @@ init _ =
 
 
 type Msg
-    = NoOp
+    = InitializeNotesTimestamps Time.Posix
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    ( model, Cmd.none )
+    case msg of
+        InitializeNotesTimestamps time ->
+            ( { model
+                | notes = List.map (\note -> { note | timestamp = Time.posixToMillis time }) model.notes
+              }
+            , Cmd.none
+            )
 
 
 
