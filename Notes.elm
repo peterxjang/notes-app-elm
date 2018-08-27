@@ -51,6 +51,8 @@ type Msg
     | SelectNote Int
     | UpdateSelectedNoteBody String
     | UpdateSelectedNoteTimestamp Time.Posix
+    | ClickNew
+    | CreateNote Time.Posix
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -106,6 +108,24 @@ update msg model =
                     in
                     ( { model | notes = newNotes }, Cmd.none )
 
+        ClickNew ->
+            ( model, Task.perform CreateNote Time.now )
+
+        CreateNote newTime ->
+            let
+                newTimestamp =
+                    Time.posixToMillis newTime
+
+                newId =
+                    newTimestamp
+            in
+            ( { model
+                | notes = [ { id = newId, body = "", timestamp = newTimestamp } ] ++ model.notes
+                , selectedNoteId = newId
+              }
+            , Cmd.none
+            )
+
 
 
 -- SUBSCRIPTIONS
@@ -124,7 +144,7 @@ view : Model -> Html Msg
 view model =
     div [ id "app" ]
         [ div [ class "toolbar" ]
-            [ button [ class "toolbar-button" ] [ text "New" ]
+            [ button [ class "toolbar-button", onClick ClickNew ] [ text "New" ]
             , button [ class "toolbar-button" ] [ text "Delete" ]
             , input [ class "toolbar-search", type_ "text", placeholder "Search..." ] []
             ]
