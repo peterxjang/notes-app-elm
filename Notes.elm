@@ -93,12 +93,57 @@ view model =
 viewNoteSelectors : Model -> Html Msg
 viewNoteSelectors model =
     div [ class "note-selectors" ]
-        (List.map (\note -> viewNoteSelector note) model.notes)
+        (model.notes
+            |> List.sortBy .timestamp
+            |> List.reverse
+            |> List.map (\note -> viewNoteSelector note)
+        )
 
 
 viewNoteSelector : Note -> Html Msg
 viewNoteSelector note =
     div [ class "note-selector" ]
-        [ p [ class "note-selector-title" ] [ text note.body ]
-        , p [ class "note-selector-timestamp" ] [ text (String.fromInt note.timestamp) ]
+        [ p [ class "note-selector-title" ] [ text (formatTitle note.body) ]
+        , p [ class "note-selector-timestamp" ] [ text (formatTimestamp note.timestamp) ]
         ]
+
+
+
+-- HELPERS
+
+
+formatTitle : String -> String
+formatTitle body =
+    let
+        maxLength =
+            20
+
+        length =
+            String.length body
+    in
+    if length > maxLength then
+        String.left (maxLength - 3) body ++ "..."
+
+    else if length == 0 then
+        "New note"
+
+    else
+        body
+
+
+formatTimestamp : Int -> String
+formatTimestamp timestamp =
+    let
+        time =
+            Time.millisToPosix timestamp
+
+        hour =
+            String.fromInt (Time.toHour Time.utc time)
+
+        minute =
+            String.fromInt (Time.toMinute Time.utc time)
+
+        second =
+            String.fromInt (Time.toSecond Time.utc time)
+    in
+    hour ++ ":" ++ minute ++ ":" ++ second ++ " UTC"
